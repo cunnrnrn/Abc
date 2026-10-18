@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local CUSTOM_IMAGE_ID = "rbxassetid://117828154165313"
 
 if CoreGui:FindFirstChild("HubGUI") then
     CoreGui.HubGUI:Destroy()
@@ -89,15 +90,12 @@ local function notify(message)
     end)
 end
 
-local openButton = create("TextButton", {
+local openButton = create("ImageButton", {
     Name = "OpenButton",
     Size = UDim2.fromOffset(48, 48),
     Position = UDim2.new(0.01, 0, 0.3, 0),
     BackgroundColor3 = C.Background,
-    Text = "UI",
-    TextColor3 = C.Red,
-    TextSize = 20,
-    Font = Enum.Font.GothamBlack,
+    Image = CUSTOM_IMAGE_ID,
     AutoButtonColor = false,
 }, gui)
 round(openButton, 14)
@@ -145,6 +143,15 @@ local main = create("Frame", {
 round(main, 16)
 stroke(main, C.Red, 1.5)
 
+local BgImage = create("ImageLabel", {
+    Image = CUSTOM_IMAGE_ID,
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundTransparency = 1,
+    ImageTransparency = 0.78,
+    ScaleType = Enum.ScaleType.Crop,
+}, main)
+round(BgImage, 16)
+
 local scale = create("UIScale", { Scale = 1 }, main)
 local function updateScale()
     local camera = workspace.CurrentCamera
@@ -160,6 +167,7 @@ end
 local top = create("Frame", {
     Size = UDim2.new(1, 0, 0, 64),
     BackgroundColor3 = C.Panel,
+    BackgroundTransparency = 0.2,
     BorderSizePixel = 0,
 }, main)
 
@@ -172,20 +180,20 @@ create("Frame", {
 
 create("TextLabel", {
     Position = UDim2.new(0, 20, 0, 12),
-    Size = UDim2.new(0, 350, 0, 25),
+    Size = UDim2.new(0, 400, 0, 25),
     BackgroundTransparency = 1,
-    Text = "CONTROL PANEL",
+    Text = "👑 TRƯƠNG TRỌNG KIÊN - HUB PRO MAX",
     TextColor3 = C.White,
     TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamBlack,
-    TextSize = 16,
+    TextSize = 15,
 }, top)
 
 create("TextLabel", {
     Position = UDim2.new(0, 21, 0, 37),
     Size = UDim2.new(0, 350, 0, 15),
     BackgroundTransparency = 1,
-    Text = "SYSTEM UTILITIES & TOOLS",
+    Text = "LỚP 9.4 • TRƯỜNG THCS NHUẬN PHÚ TÂN",
     TextColor3 = C.Muted,
     TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.GothamMedium,
@@ -208,6 +216,7 @@ local sidebar = create("Frame", {
     Position = UDim2.new(0, 0, 0, 66),
     Size = UDim2.new(0, 155, 1, -66),
     BackgroundColor3 = C.Panel,
+    BackgroundTransparency = 0.2,
     BorderSizePixel = 0,
 }, main)
 
@@ -266,6 +275,7 @@ local function makeCard(titleText, descText, height)
     local card = create("Frame", {
         Size = UDim2.new(1, -4, 0, height or 62),
         BackgroundColor3 = C.Card,
+        BackgroundTransparency = 0.2,
         BorderSizePixel = 0,
     }, pageBody)
     round(card, 10)
@@ -307,6 +317,7 @@ local slConn = nil
 local savedPos1 = nil
 local savedPos2 = nil
 local isFlying = false
+local selectedTarget = nil
 
 local function flyToCFrame(targetCFrame)
     local char = LocalPlayer.Character
@@ -420,11 +431,49 @@ local pages = {
                 end
             end)
 
-            local c2 = makeCard("Định Vị Người Chơi (ESP)", "Hiển thị tên và khoảng cách")
+            local c2 = makeCard("Định Vị Người Chơi (ESP Khoảng Cách)", "Hiển thị tên kèm khoảng cách chuẩn (m)")
             local b2 = create("TextButton", {
                 Parent = c2, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
                 Size = UDim2.fromOffset(55, 26), BackgroundColor3 = C.RedDark, Text = "BẬT", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 10
             }, c2) round(b2, 6)
+            
+            local function addESPToPlayer(v)
+                if v == LocalPlayer then return end
+                if not v.Character then return end
+                local root = v.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                
+                local bg = Instance.new("BillboardGui")
+                bg.Name = v.Name
+                bg.Parent = espFolder
+                bg.Adornee = root
+                bg.AlwaysOnTop = true
+                bg.Size = UDim2.new(0, 150, 0, 40)
+                bg.StudsOffset = Vector3.new(0, 3, 0)
+                
+                local txt = Instance.new("TextLabel")
+                txt.Parent = bg
+                txt.Size = UDim2.new(1, 0, 1, 0)
+                txt.BackgroundTransparency = 1
+                txt.Font = Enum.Font.GothamBold
+                txt.TextSize = 11
+                txt.TextColor3 = Color3.fromRGB(0, 255, 200)
+                txt.TextStrokeTransparency = 0
+                txt.Text = v.DisplayName
+                
+                task.spawn(function()
+                    while espActive and v.Character and root and root.Parent do
+                        local myChar = LocalPlayer.Character
+                        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                            local dist = math.floor((myChar.HumanoidRootPart.Position - root.Position).Magnitude)
+                            txt.Text = "🎯 " .. v.DisplayName .. "\n[" .. dist .. "m]"
+                        end
+                        task.wait(0.1)
+                    end
+                    bg:Destroy()
+                end)
+            end
+
             b2.MouseButton1Click:Connect(function()
                 espActive = not espActive
                 b2.BackgroundColor3 = espActive and C.Green or C.RedDark
@@ -432,25 +481,11 @@ local pages = {
                 espFolder:ClearAllChildren()
                 if espActive then
                     for _, v in ipairs(Players:GetPlayers()) do
-                        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                            local root = v.Character.HumanoidRootPart
-                            local bg = Instance.new("BillboardGui", espFolder)
-                            bg.Adornee = root
-                            bg.AlwaysOnTop = true
-                            bg.Size = UDim2.new(0, 150, 0, 40)
-                            bg.StudsOffset = Vector3.new(0, 3, 0)
-                            local txt = Instance.new("TextLabel", bg)
-                            txt.Size = UDim2.new(1, 0, 1, 0)
-                            txt.BackgroundTransparency = 1
-                            txt.Font = Enum.Font.GothamBold
-                            txt.TextSize = 11
-                            txt.TextColor3 = Color3.fromRGB(0, 255, 200)
-                            txt.Text = v.DisplayName
-                        end
+                        addESPToPlayer(v)
                     end
-                    notify("Đã bật ESP")
+                    notify("Đã bật Định Vị khoảng cách!")
                 else
-                    notify("Đã tắt ESP")
+                    notify("Đã tắt Định Vị!")
                 end
             end)
 
@@ -553,7 +588,85 @@ local pages = {
             c1.Size = UDim2.new(1, -4, 0, 178)
         end,
     },
-    BOOST = {
+}
+local function appendPart3()
+    pages.PLAYERTP = {
+        title = "BAY ĐẾN NGƯỜI CHƠI",
+        build = function()
+            local cTop = makeCard("Quét & Chọn Người Chơi Trong Server", "Chọn mục tiêu để bay tốc độ mượt 165")
+            cTop.Size = UDim2.new(1, -4, 0, 45)
+
+            local bRefresh = create("TextButton", {
+                Parent = cTop, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
+                Size = UDim2.fromOffset(80, 26), BackgroundColor3 = C.RedDark, Text = "🔄 RESET", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 10
+            }, cTop) round(bRefresh, 6)
+
+            local listContainer = create("ScrollingFrame", {
+                Parent = pageBody,
+                Size = UDim2.new(1, -4, 0, 190),
+                BackgroundColor3 = C.Card,
+                BackgroundTransparency = 0.3,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                ScrollBarThickness = 2,
+            }, pageBody)
+            round(listContainer, 8)
+            create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, listContainer)
+
+            local function loadPlayers()
+                for _, child in ipairs(listContainer:GetChildren()) do
+                    if child:IsA("TextButton") then child:Destroy() end
+                end
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer then
+                        local pBtn = create("TextButton", {
+                            Parent = listContainer,
+                            Size = UDim2.new(1, -4, 0, 32),
+                            BackgroundColor3 = C.Panel,
+                            BackgroundTransparency = 0.3,
+                            Font = Enum.Font.GothamBold,
+                            Text = "👤 " .. plr.DisplayName .. " (@" .. plr.Name .. ")",
+                            TextColor3 = C.White,
+                            TextSize = 10,
+                        }, listContainer)
+                        round(pBtn, 6)
+                        pBtn.MouseButton1Click:Connect(function()
+                            selectedTarget = plr
+                            notify("Đã chọn mục tiêu: " .. plr.DisplayName)
+                        end)
+                    end
+                end
+            end
+
+            bRefresh.MouseButton1Click:Connect(function()
+                loadPlayers()
+                notify("Đã quét lại danh sách người chơi trong server!")
+            end)
+            loadPlayers()
+
+            local bGo = create("TextButton", {
+                Parent = pageBody,
+                Size = UDim2.new(1, -4, 0, 38),
+                BackgroundColor3 = Color3.fromRGB(255, 140, 0),
+                Font = Enum.Font.GothamBold,
+                Text = "🚀 BAY MƯỢT ĐẾN NGƯỜI CHƠI ĐÃ CHỌN",
+                TextColor3 = C.White,
+                TextSize = 11,
+            }, pageBody)
+            round(bGo, 8)
+
+            bGo.MouseButton1Click:Connect(function()
+                if selectedTarget and selectedTarget.Character and selectedTarget.Character:FindFirstChild("HumanoidRootPart") then
+                    flyToCFrame(selectedTarget.Character.HumanoidRootPart.CFrame)
+                else
+                    notify("Chưa chọn người chơi hoặc mục tiêu chưa vào game!")
+                end
+            end)
+        end,
+    }
+
+    pages.BOOST = {
         title = "TỐI ƯU & FPS",
         build = function()
             local c1 = makeCard("Siêu Anti-Lag Cường Hóa", "Tối ưu hóa đồ họa để tăng FPS tối đa")
@@ -571,21 +684,16 @@ local pages = {
                 notify("Đã bật Anti-Lag tối đa!")
             end)
         end,
-    },
-    SETTINGS = {
-        title = "CÀI ĐẶT HỆ THỐNG",
-        build = function()
-            makeCard("Giao Diện Black Nebula", "Hệ thống tùy chỉnh mượt mà không giới hạn.", 75)
-            makeCard("Trạng Thái Hoạt Động", "Tất cả các chức năng đang chạy ổn định.", 75)
-        end,
-    },
-}
+    }
+end
+
+appendPart3()
 
 local navItems = {
     {name = "TIỆN ÍCH", id = "UTILITY"},
     {name = "LƯU VỊ TRÍ", id = "TELEPORT"},
+    {name = "BAY ĐẾN PLAYER", id = "PLAYERTP"},
     {name = "TỐI ƯU FPS", id = "BOOST"},
-    {name = "CÀI ĐẶT", id = "SETTINGS"},
 }
 
 local navButtons = {}
@@ -656,4 +764,4 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 renderPage("UTILITY")
-notify("Đã sẵn sàng!")
+notify("Chào mừng Trương Trọng Kiên trở lại!")
