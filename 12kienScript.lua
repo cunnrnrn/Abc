@@ -5,6 +5,8 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -23,6 +25,7 @@ local C = {
     White = Color3.fromRGB(245, 245, 250),
     Muted = Color3.fromRGB(145, 145, 160),
     Green = Color3.fromRGB(70, 230, 155),
+    Pink = Color3.fromRGB(255, 105, 180),
 }
 
 local function create(class, props, parent)
@@ -309,8 +312,12 @@ end
 
 local noclipConn = nil
 local espActive = false
+local boxEspActive = false
 local espFolder = Instance.new("Folder", gui)
 espFolder.Name = "ESPFolder"
+local boxEspFolder = Instance.new("Folder", gui)
+boxEspFolder.Name = "BoxESPFolder"
+
 local shiftLockEnabled = false
 local isLocked = false
 local slConn = nil
@@ -431,7 +438,8 @@ local pages = {
                 end
             end)
 
-            local c2 = makeCard("Định Vị Người Chơi (ESP Khoảng Cách)", "Hiển thị tên kèm khoảng cách chuẩn (m)")
+            -- ESP Chữ màu đỏ, không mũi tên
+            local c2 = makeCard("Định Vị Người Chơi (ESP Tên Đỏ)", "Hiển thị tên và khoảng cách màu đỏ rõ nét")
             local b2 = create("TextButton", {
                 Parent = c2, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
                 Size = UDim2.fromOffset(55, 26), BackgroundColor3 = C.RedDark, Text = "BẬT", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 10
@@ -456,8 +464,8 @@ local pages = {
                 txt.Size = UDim2.new(1, 0, 1, 0)
                 txt.BackgroundTransparency = 1
                 txt.Font = Enum.Font.GothamBold
-                txt.TextSize = 11
-                txt.TextColor3 = Color3.fromRGB(0, 255, 200)
+                txt.TextSize = 12
+                txt.TextColor3 = Color3.fromRGB(255, 50, 50) -- Màu đỏ chuẩn
                 txt.TextStrokeTransparency = 0
                 txt.Text = v.DisplayName
                 
@@ -466,7 +474,7 @@ local pages = {
                         local myChar = LocalPlayer.Character
                         if myChar and myChar:FindFirstChild("HumanoidRootPart") then
                             local dist = math.floor((myChar.HumanoidRootPart.Position - root.Position).Magnitude)
-                            txt.Text = "🎯 " .. v.DisplayName .. "\n[" .. dist .. "m]"
+                            txt.Text = v.DisplayName .. " [" .. dist .. "m]"
                         end
                         task.wait(0.1)
                     end
@@ -483,13 +491,52 @@ local pages = {
                     for _, v in ipairs(Players:GetPlayers()) do
                         addESPToPlayer(v)
                     end
-                    notify("Đã bật Định Vị khoảng cách!")
+                    notify("Đã bật Định Vị tên màu đỏ!")
                 else
                     notify("Đã tắt Định Vị!")
                 end
             end)
 
-            local c3 = makeCard("Khóa Màn Hình (Shift Lock)", "Cố định góc nhìn điện thoại")
+            -- Tính năng Bao bọc người chơi màu hồng (Box ESP)
+            local cBox = makeCard("Bao Bọc Người Chơi (Box ESP Hồng)", "Bọc khung 3D màu hồng quanh nhân vật")
+            local bBox = create("TextButton", {
+                Parent = cBox, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
+                Size = UDim2.fromOffset(55, 26), BackgroundColor3 = C.RedDark, Text = "BẬT", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 10
+            }, cBox) round(bBox, 6)
+
+            local function addBoxToPlayer(v)
+                if v == LocalPlayer then return end
+                if not v.Character then return end
+                local root = v.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                local box = Instance.new("Highlight")
+                box.Name = v.Name
+                box.Parent = boxEspFolder
+                box.Adornee = v.Character
+                box.FillColor = C.Pink
+                box.OutlineColor = Color3.fromRGB(255, 255, 255)
+                box.FillTransparency = 0.5
+                box.OutlineTransparency = 0
+            end
+
+            bBox.MouseButton1Click:Connect(function()
+                boxEspActive = not boxEspActive
+                bBox.BackgroundColor3 = boxEspActive and C.Green or C.RedDark
+                bBox.Text = boxEspActive and "TẮT" or "BẬT"
+                boxEspFolder:ClearAllChildren()
+                if boxEspActive then
+                    for _, v in ipairs(Players:GetPlayers()) do
+                        addBoxToPlayer(v)
+                    end
+                    notify("Đã bật bao bọc người chơi màu hồng!")
+                else
+                    notify("Đã tắt bao bọc!")
+                end
+            end)
+
+            -- Khóa màn hình fix chuẩn
+            local c3 = makeCard("Khóa Màn Hình (Shift Lock Mobile)", "Cố định hướng camera di động mượt mà")
             local b3 = create("TextButton", {
                 Parent = c3, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
                 Size = UDim2.fromOffset(55, 26), BackgroundColor3 = C.RedDark, Text = "BẬT", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 10
@@ -500,6 +547,7 @@ local pages = {
                 b3.BackgroundColor3 = shiftLockEnabled and C.Green or C.RedDark
                 b3.Text = shiftLockEnabled and "TẮT" or "BẬT"
                 if shiftLockEnabled then
+                    if slConn then slConn:Disconnect() end
                     slConn = RunService.RenderStepped:Connect(function()
                         if isLocked then
                             local char = LocalPlayer.Character
@@ -513,6 +561,7 @@ local pages = {
                     notify("Đã bật Shift Lock (Bấm nút 🎯 màn hình)")
                 else
                     isLocked = false
+                    ShiftLockButton.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
                     if slConn then slConn:Disconnect(); slConn = nil end
                     notify("Đã tắt Shift Lock")
                 end
@@ -522,6 +571,7 @@ local pages = {
                 if shiftLockEnabled then
                     isLocked = not isLocked
                     ShiftLockButton.BackgroundColor3 = isLocked and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(18, 22, 32)
+                    notify(isLocked ? "Đã khóa hướng nhìn" : "Đã mở khóa hướng nhìn")
                 end
             end)
 
@@ -666,6 +716,44 @@ local function appendPart3()
         end,
     }
 
+    pages.SERVER = {
+        title = "QUẢN LÝ SERVER",
+        build = function()
+            local c1 = makeCard("Đổi Server (Server Hop)", "Tìm server ít người hoặc đổi server mới")
+            local b1 = create("TextButton", {
+                Parent = c1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
+                Size = UDim2.fromOffset(75, 26), BackgroundColor3 = C.RedDark, Text = "ĐỔI SERVER", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 9
+            }, c1) round(b1, 6)
+            b1.MouseButton1Click:Connect(function()
+                notify("Đang tìm server mới...")
+                local servers = {}
+                local success, err = pcall(function()
+                    local req = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+                    for _, s in ipairs(req.data) do
+                        if type(s) == "table" and s.playing and s.maxPlayers and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                            table.insert(servers, s.id)
+                        end
+                    end
+                end)
+                if #servers > 0 then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
+                else
+                    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+                end
+            end)
+
+            local c2 = makeCard("Vào Lại Server Cũ (Rejoin)", "Kết nối lại ngay lập tức vào server hiện tại")
+            local b2 = create("TextButton", {
+                Parent = c2, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
+                Size = UDim2.fromOffset(75, 26), BackgroundColor3 = C.RedDark, Text = "REJOIN", TextColor3 = C.White, Font = Enum.Font.GothamBold, TextSize = 9
+            }, c2) round(b2, 6)
+            b2.MouseButton1Click:Connect(function()
+                notify("Đang kết nối lại server...")
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+            end)
+        end,
+    }
+
     pages.BOOST = {
         title = "TỐI ƯU & FPS",
         build = function()
@@ -692,7 +780,8 @@ appendPart3()
 local navItems = {
     {name = "TIỆN ÍCH", id = "UTILITY"},
     {name = "LƯU VỊ TRÍ", id = "TELEPORT"},
-    {name = "BAY ĐẾN PLAYER", id = "PLAYERTP"},
+    {name = "BAY PLAYER", id = "PLAYERTP"},
+    {name = "SERVER", id = "SERVER"},
     {name = "TỐI ƯU FPS", id = "BOOST"},
 }
 
